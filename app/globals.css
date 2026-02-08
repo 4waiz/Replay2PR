@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  @apply bg-ink-900 text-steel-200 font-body;
+  min-height: 100vh;
+  background-image: radial-gradient(circle at 20% 0%, rgba(56, 189, 248, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.12), transparent 40%),
+    linear-gradient(160deg, rgba(12, 16, 24, 0.95), rgba(5, 7, 12, 0.98));
+}
+
+a {
+  @apply text-sky-300 hover:text-sky-200 transition-colors;
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.3);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+}
+
+.glass {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  backdrop-filter: blur(18px);
+}
+
+.shimmer {
+  background: linear-gradient(110deg, rgba(148, 163, 184, 0.1) 10%, rgba(148, 163, 184, 0.35) 18%, rgba(148, 163, 184, 0.1) 33%);
+  background-size: 200% 100%;
+  animation: shimmer 2.2s linear infinite;
+}
+
+.code-surface {
+  background: #0b111b;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.step-dot {
+  box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.1);
+}
