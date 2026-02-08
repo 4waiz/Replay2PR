@@ -125,8 +125,8 @@ export function UploadDropzone({ disabled, demoUrl, maxMb = DEFAULT_MAX_MB, onUp
     <div className="space-y-3">
       <div
         className={cn(
-          "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/15 bg-white/5 p-6 text-center transition",
-          dragging && "border-sky-300/60 bg-sky-300/10",
+          "relative flex min-h-[210px] cursor-pointer flex-col items-center justify-center gap-3 rounded-[28px] border-2 border-dashed border-ink/20 bg-white/90 p-6 text-center shadow-sticker transition",
+          dragging && "border-primary bg-hero-cyan bg-cover",
           disabled && "cursor-not-allowed opacity-60"
         )}
         onDragOver={(event) => {
@@ -153,20 +153,20 @@ export function UploadDropzone({ disabled, demoUrl, maxMb = DEFAULT_MAX_MB, onUp
         />
         {preview ? (
           <div className="w-full">
-            <div className="flex items-center justify-between text-xs text-steel-300">
+            <div className="flex items-center justify-between text-xs text-muted">
               <span>{filename || "Demo clip"}</span>
-              {status === "uploaded" && !demoUrl ? <span className="text-emerald-200">Uploaded</span> : null}
+              {status === "uploaded" && !demoUrl ? <span className="text-success">Uploaded</span> : null}
             </div>
             <video className="mt-3 h-40 w-full rounded-2xl object-cover" src={preview} controls />
           </div>
         ) : (
           <>
-            <div className="rounded-full bg-white/10 p-4">
-              {disabled ? <Film className="h-6 w-6 text-steel-400" /> : <CloudUpload className="h-6 w-6 text-sky-300" />}
+            <div className="rounded-full bg-hero-pink p-4 shadow-pop">
+              {disabled ? <Film className="h-6 w-6 text-ink" /> : <CloudUpload className="h-6 w-6 text-ink" />}
             </div>
             <div>
-              <p className="text-sm text-white">Drag & drop an MP4 bug video</p>
-              <p className="text-xs text-steel-400">Max size {maxMb}MB. No login required.</p>
+              <p className="text-sm text-ink font-semibold">Drag & drop an MP4 bug video</p>
+              <p className="text-xs text-muted">Max size {maxMb}MB. No login required.</p>
             </div>
           </>
         )}
@@ -174,7 +174,7 @@ export function UploadDropzone({ disabled, demoUrl, maxMb = DEFAULT_MAX_MB, onUp
 
       {status === "uploading" ? <Progress value={progress} /> : null}
 
-      {error ? <p className="text-xs text-amberish-300">{error}</p> : null}
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
 
       {preview && !disabled && !demoUrl ? (
         <Button variant="ghost" size="sm" onClick={reset} className="inline-flex items-center gap-2">

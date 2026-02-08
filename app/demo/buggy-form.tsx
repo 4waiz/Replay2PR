@@ -25,21 +25,21 @@ export default function BuggyForm() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 rounded-[28px] border-2 border-ink/10 bg-white/90 p-6 shadow-soft">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Replay Incident Report</h2>
-          <p className="text-sm text-steel-300">File a quick report to reproduce the bug.</p>
+          <h2 className="text-2xl font-semibold text-ink">Replay Incident Report</h2>
+          <p className="text-sm text-muted">File a quick report to reproduce the bug.</p>
         </div>
         <Badge data-testid="status-chip" variant={submitted ? "success" : "default"}>
-          {submitted ? "Sent" : status}
+          {submitted ? "? Sent" : status}
         </Badge>
       </div>
 
       {submitted ? (
         <div
           data-testid="success-banner"
-          className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200"
+          className="rounded-2xl border-2 border-success/40 bg-hero-lime px-4 py-3 text-sm font-semibold text-ink"
         >
           Report sent to the Replay pipeline.
         </div>
@@ -48,7 +48,7 @@ export default function BuggyForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-steel-300">Reporter</label>
+            <label className="text-xs font-medium text-muted">Reporter</label>
             <Input
               data-testid="name-input"
               value={name}
@@ -57,7 +57,7 @@ export default function BuggyForm() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-steel-300">Issue ID</label>
+            <label className="text-xs font-medium text-muted">Issue ID</label>
             <Input
               data-testid="issue-input"
               value={issue}
@@ -68,7 +68,7 @@ export default function BuggyForm() {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-steel-300">Steps Captured</label>
+          <label className="text-xs font-medium text-muted">Steps Captured</label>
           <Textarea
             data-testid="steps-input"
             value={steps}
@@ -77,10 +77,10 @@ export default function BuggyForm() {
           />
         </div>
 
-        <Button type="submit" data-testid="submit-button" className="w-full">
+        <Button type="submit" data-testid="submit-button" className="w-full wiggle-hover">
           Send Replay Report
         </Button>
       </form>
     </div>
   );
-}
+}
