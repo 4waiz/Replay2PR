@@ -6,7 +6,7 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || "http://localhost:3000",
     headless: true,
     screenshot: "only-on-failure",
-    trace: "off"
+    trace: "retain-on-failure"
   },
   reporter: "line"
 });

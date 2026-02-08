@@ -16,13 +16,14 @@ export interface UploadResult {
 interface UploadDropzoneProps {
   disabled?: boolean;
   demoUrl?: string | null;
+  maxMb?: number;
   onUploaded: (result: UploadResult) => void;
   onCleared?: () => void;
 }
 
-const MAX_MB = 50;
+const DEFAULT_MAX_MB = 50;
 
-export function UploadDropzone({ disabled, demoUrl, onUploaded, onCleared }: UploadDropzoneProps) {
+export function UploadDropzone({ disabled, demoUrl, maxMb = DEFAULT_MAX_MB, onUploaded, onCleared }: UploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(demoUrl || null);
@@ -48,8 +49,8 @@ export function UploadDropzone({ disabled, demoUrl, onUploaded, onCleared }: Upl
     if (file.type !== "video/mp4") {
       return "Only MP4 files are supported.";
     }
-    if (file.size > MAX_MB * 1024 * 1024) {
-      return `File exceeds ${MAX_MB}MB limit.`;
+    if (file.size > maxMb * 1024 * 1024) {
+      return `File exceeds ${maxMb}MB limit.`;
     }
     return null;
   };
@@ -105,7 +106,7 @@ export function UploadDropzone({ disabled, demoUrl, onUploaded, onCleared }: Upl
       }
     };
     xhr.send(formData);
-  }, [onUploaded]);
+  }, [onUploaded, maxMb]);
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -165,7 +166,7 @@ export function UploadDropzone({ disabled, demoUrl, onUploaded, onCleared }: Upl
             </div>
             <div>
               <p className="text-sm text-white">Drag & drop an MP4 bug video</p>
-              <p className="text-xs text-steel-400">Max size {MAX_MB}MB. No login required.</p>
+              <p className="text-xs text-steel-400">Max size {maxMb}MB. No login required.</p>
             </div>
           </>
         )}

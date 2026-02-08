@@ -14,8 +14,12 @@ import { extractReproSteps, generatePatchDiff, generatePlaywrightTest } from "@/
 import { runPlaywrightTest } from "@/lib/playwright";
 import { applyUnifiedDiff, createUnifiedDiff } from "@/lib/patcher";
 import { readDemoTarget, resetDemoTarget, writeDemoTarget } from "@/lib/demo-target";
+import { getMaxConcurrentJobs } from "@/lib/env";
 
 const jobs = new Map<string, JobData>();
+const jobQueue: string[] = [];
+let runningJobs = 0;
+const MAX_CONCURRENT_JOBS = getMaxConcurrentJobs();
 
 const stepDefs: { id: StepId; title: string }[] = [
   { id: "extract", title: "Extract" },
@@ -94,32 +98,56 @@ export async function createJob(params: {
 
   jobs.set(id, job);
   await persistJob(job);
-  void runJob(job).catch(async (error) => {
-    job.status = "error";
-    logStep(job, "ship", `Job failed: ${error.message || error}`);
-    finishStep(job, "ship", "error", "Failed during processing");
-    await persistJob(job);
-  });
+  jobQueue.push(job.id);
+  void processQueue();
 
   return job;
 }
 
 export async function getJob(id: string) {
-  if (jobs.has(id)) {
+  try {
+    const jobDir = getJobDir(id);
+    const diskJob = await readJson<JobData>(path.join(jobDir, "job.json"));
+    if (diskJob) {
+      jobs.set(id, diskJob);
+      return diskJob;
+    }
     return jobs.get(id);
+  } catch {
+    return undefined;
   }
-  const jobDir = getJobDir(id);
-  const diskJob = await readJson<JobData>(path.join(jobDir, "job.json"));
-  if (diskJob) {
-    jobs.set(id, diskJob);
-    return diskJob;
+}
+
+async function processQueue() {
+  if (runningJobs >= MAX_CONCURRENT_JOBS) return;
+  const nextId = jobQueue.shift();
+  if (!nextId) return;
+  const job = await getJob(nextId);
+  if (!job) {
+    void processQueue();
+    return;
   }
-  return undefined;
+  runningJobs += 1;
+  job.status = "running";
+  await persistJob(job);
+  void runJobWithGuard(job).finally(() => {
+    runningJobs -= 1;
+    void processQueue();
+  });
+}
+
+async function runJobWithGuard(job: JobData) {
+  try {
+    await runJob(job);
+  } catch (error: any) {
+    job.status = "error";
+    logStep(job, "ship", `Job failed: ${error.message || error}`);
+    finishStep(job, "ship", "error", "Failed during processing");
+    await persistJob(job);
+  }
 }
 
 async function runJob(job: JobData) {
-  job.status = "running";
-  await persistJob(job);
 
   const jobDir = getJobDir(job.id);
   await fs.mkdir(jobDir, { recursive: true });

@@ -3,10 +3,11 @@ import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs/promises";
 import { ensureArtifactsStructure, getUploadsDir } from "@/lib/artifacts";
+import { getMaxUploadMb } from "@/lib/env";
 
 export const runtime = "nodejs";
 
-const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 50);
+const MAX_UPLOAD_MB = getMaxUploadMb();
 
 export async function POST(request: Request) {
   await ensureArtifactsStructure();
@@ -17,8 +18,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
   }
 
-  if (file.type !== "video/mp4") {
-    return NextResponse.json({ error: "Only MP4 files are supported" }, { status: 400 });
+  const originalName = file.name || "upload.mp4";
+  const ext = path.extname(originalName).toLowerCase();
+  const isMp4Ext = ext === ".mp4";
+  const isMp4Mime = file.type === "video/mp4";
+  if (!isMp4Ext || !isMp4Mime) {
+    return NextResponse.json({ error: "Only MP4 files are supported (mime + .mp4 extension required)" }, { status: 400 });
   }
 
   const maxBytes = MAX_UPLOAD_MB * 1024 * 1024;
@@ -26,8 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `File exceeds ${MAX_UPLOAD_MB}MB limit` }, { status: 400 });
   }
 
-  const ext = path.extname(file.name).toLowerCase() || ".mp4";
-  const uploadId = `upload-${randomUUID()}${ext}`;
+  const uploadId = `upload-${randomUUID()}.mp4`;
   const uploadPath = path.join(getUploadsDir(), uploadId);
 
   const arrayBuffer = await file.arrayBuffer();

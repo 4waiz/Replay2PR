@@ -16,7 +16,7 @@ export function getJobsDir() {
 }
 
 export function getJobDir(jobId: string) {
-  return path.join(getJobsDir(), jobId);
+  return safeJoin(getJobsDir(), jobId);
 }
 
 export async function writeText(filePath: string, contents: string) {

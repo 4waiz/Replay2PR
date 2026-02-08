@@ -46,10 +46,18 @@ export function MissionControl({ job }: { job: JobData | null }) {
               ? "bg-emerald-400/20 text-emerald-200"
               : job.status === "error"
                 ? "bg-amberish-400/20 text-amberish-200"
-                : "bg-sky-400/20 text-sky-200"
+                : job.status === "queued"
+                  ? "bg-white/10 text-steel-200"
+                  : "bg-sky-400/20 text-sky-200"
           )}
         >
-          {job.status === "success" ? "Evidence Ready" : job.status === "error" ? "Needs Attention" : "Running"}
+          {job.status === "success"
+            ? "Evidence Ready"
+            : job.status === "error"
+              ? "Needs Attention"
+              : job.status === "queued"
+                ? "Queued"
+                : "Running"}
         </Badge>
       </div>
 

@@ -2,15 +2,16 @@
 
 Replay2PR turns short bug replays into reproducible Playwright tests, patch attempts, and a shareable Evidence Pack. It ships with a built-in demo target (intentional bug) and a demo video so the full pipeline works locally without paid services.
 
-## Setup
+## Setup (Windows)
 
-1. Install dependencies:
+1. Install Node.js 18+ (or 20+ recommended).
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Create `.env.local` from `.env.example` and set your key:
+3. Create `.env.local` from `.env.example`:
 
 ```bash
 copy .env.example .env.local
@@ -19,8 +20,30 @@ copy .env.example .env.local
 Set:
 - `GEMINI_API_KEY` (optional if you use `USE_MOCK_GEMINI=true`)
 - `GEMINI_MODEL_FLASH` and `GEMINI_MODEL_PRO` (defaults target Gemini 3)
+- `MAX_CONCURRENT_JOBS` (default 1 to avoid Playwright collisions)
 
-3. Install Playwright browsers (once):
+4. Install Playwright browsers (once):
+
+```bash
+npm run playwright:install
+```
+
+## Setup (macOS / Linux)
+
+1. Install Node.js 18+ (or 20+ recommended).
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create `.env.local` from `.env.example`:
+
+```bash
+cp .env.example .env.local
+```
+
+4. Install Playwright browsers (once):
 
 ```bash
 npm run playwright:install
@@ -49,13 +72,21 @@ Click **Run Replay** and watch Mission Control progress. When complete, open the
 npm run test:e2e
 ```
 
-## 3-Minute Demo Script
+## Judge Script (3 Minutes)
 
-1. Open the landing page. Call out the single CTA, demo mode toggle, and upload zone.
-2. Click **Run Replay**. Watch Mission Control step through Extract -> Reproduce -> Patch -> Verify -> Ship.
-3. Open `/demo` to show the bug (success banner never appears).
-4. When the run finishes, click **Open Evidence Pack**.
-5. Walk through the Evidence Pack: repro steps, generated test, patch diff, verification logs, and artifacts.
+1. Open the landing page.
+2. Click **Judge Mode** (forces demo mode and starts a run immediately).
+3. While it runs, open `/demo` to show the bug (success banner never appears).
+4. Return to the landing page; when complete, click **Open Evidence Pack**.
+5. Walk through: repro steps, generated test, patch diff, verification logs, artifacts.
+6. Click **Download Evidence JSON** to show shareable proof.
+
+## Troubleshooting
+
+- Playwright browsers missing: run `npm run playwright:install`.
+- Base URL unreachable: ensure `npm run dev` is running and `BASE_URL` matches (default `http://localhost:3000`).
+- Node version mismatch: use Node 18+ (20+ recommended).
+- Gemini errors: set `GEMINI_API_KEY` or enable `USE_MOCK_GEMINI=true`.
 
 ## Overview of What You Built
 

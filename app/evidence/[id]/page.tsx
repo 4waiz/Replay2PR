@@ -70,6 +70,9 @@ export default function EvidencePage() {
               <ClipboardCopy className="h-4 w-4" />
               Copy Share Link
             </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/api/evidence/${job.id}`}>Download Evidence JSON</a>
+            </Button>
           </div>
         </div>
 
@@ -102,11 +105,15 @@ export default function EvidencePage() {
             <CardDescription>Extracted by Gemini from the bug replay.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ol className="list-decimal space-y-2 pl-6 text-sm text-steel-200">
-              {job.reproSteps?.map((step, index) => (
-                <li key={`step-${index}`}>{step}</li>
-              ))}
-            </ol>
+            {job.reproSteps && job.reproSteps.length > 0 ? (
+              <ol className="list-decimal space-y-2 pl-6 text-sm text-steel-200">
+                {job.reproSteps.map((step, index) => (
+                  <li key={`step-${index}`}>{step}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-sm text-steel-300">Not generated.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -149,15 +156,21 @@ export default function EvidencePage() {
             <Card className="glass">
               <CardHeader>
                 <CardTitle>Verification Results</CardTitle>
-                <CardDescription>{job.verify?.summary}</CardDescription>
+                <CardDescription>{job.verify?.summary || "Not generated yet."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Badge className={job.verify?.passed ? "bg-emerald-400/20 text-emerald-200" : "bg-amberish-400/20 text-amberish-200"}>
-                  {job.verify?.passed ? "PASS" : "FAIL"}
-                </Badge>
-                <ScrollArea className="h-48 rounded-2xl border border-white/10 bg-ink-900/70 p-3">
-                  <pre className="text-xs text-steel-200">{job.verify?.output || "No output"}</pre>
-                </ScrollArea>
+                {job.verify ? (
+                  <>
+                    <Badge className={job.verify.passed ? "bg-emerald-400/20 text-emerald-200" : "bg-amberish-400/20 text-amberish-200"}>
+                      {job.verify.passed ? "PASS" : "FAIL"}
+                    </Badge>
+                    <ScrollArea className="h-48 rounded-2xl border border-white/10 bg-ink-900/70 p-3">
+                      <pre className="text-xs text-steel-200">{job.verify.output || "No output"}</pre>
+                    </ScrollArea>
+                  </>
+                ) : (
+                  <p className="text-sm text-steel-300">Not generated.</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -171,10 +184,18 @@ export default function EvidencePage() {
           <CardContent className="grid gap-4 md:grid-cols-2">
             {job.evidence?.beforeImage ? (
               <img className="rounded-3xl border border-white/10" src={job.evidence.beforeImage} alt="Before patch" />
-            ) : null}
+            ) : (
+              <div className="flex min-h-[220px] items-center justify-center rounded-3xl border border-white/10 bg-white/5 text-sm text-steel-300">
+                Before artifact not generated.
+              </div>
+            )}
             {job.evidence?.afterImage ? (
               <img className="rounded-3xl border border-white/10" src={job.evidence.afterImage} alt="After patch" />
-            ) : null}
+            ) : (
+              <div className="flex min-h-[220px] items-center justify-center rounded-3xl border border-white/10 bg-white/5 text-sm text-steel-300">
+                After artifact not generated.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

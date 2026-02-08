@@ -24,6 +24,7 @@ export default function HomePage() {
   const [job, setJob] = useState<JobData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusInfo, setStatusInfo] = useState<{ mockMode: boolean; maxUploadMb: number } | null>(null);
 
   useEffect(() => {
     if (!demoMode) {
@@ -35,6 +36,13 @@ export default function HomePage() {
       .then((data) => setDemoUrl(data.url))
       .catch(() => setDemoUrl(null));
   }, [demoMode]);
+
+  useEffect(() => {
+    fetch("/api/status")
+      .then((res) => res.json())
+      .then((data) => setStatusInfo(data))
+      .catch(() => setStatusInfo(null));
+  }, []);
 
   useEffect(() => {
     if (!jobId) return;
@@ -67,9 +75,22 @@ export default function HomePage() {
   }, [job]);
 
   const canStart = demoMode || Boolean(upload?.uploadId);
+  const mockMode = statusInfo?.mockMode ?? false;
+  const maxUploadMb = statusInfo?.maxUploadMb ?? 50;
 
-  const startJob = async () => {
-    if (!canStart) return;
+  const launchJob = async (
+    forceDemo?: boolean,
+    overrides?: { notes?: string; repoUrl?: string; upload?: UploadResult | null }
+  ) => {
+    const effectiveDemo = forceDemo ?? demoMode;
+    const effectiveUpload = overrides?.upload ?? upload;
+    const effectiveNotes = overrides?.notes ?? notes;
+    const effectiveRepo = overrides?.repoUrl ?? repoUrl;
+
+    if (!effectiveDemo && !effectiveUpload?.uploadId) {
+      setError("Upload a video or enable demo mode to continue.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -77,11 +98,11 @@ export default function HomePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          demoMode,
-          uploadId: upload?.uploadId,
-          uploadFilename: upload?.filename,
-          notes,
-          repoUrl: repoUrl || undefined
+          demoMode: effectiveDemo,
+          uploadId: effectiveDemo ? undefined : effectiveUpload?.uploadId,
+          uploadFilename: effectiveDemo ? undefined : effectiveUpload?.filename,
+          notes: effectiveNotes,
+          repoUrl: effectiveDemo ? undefined : (effectiveRepo || undefined)
         })
       });
       if (!res.ok) {
@@ -95,6 +116,16 @@ export default function HomePage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const startJob = () => launchJob();
+
+  const startJudgeMode = () => {
+    setDemoMode(true);
+    setUpload(null);
+    setRepoUrl("");
+    setNotes("");
+    void launchJob(true, { notes: "", repoUrl: "", upload: null });
   };
 
   const shareUrl = job ? `${typeof window !== "undefined" ? window.location.origin : ""}${job.shareUrl}` : "";
@@ -113,6 +144,7 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="info">Demo Ready</Badge>
+          {mockMode ? <Badge variant="warning">Mock Mode</Badge> : null}
           <Button variant="ghost" size="sm" asChild>
             <a href="/demo">Open Demo Target</a>
           </Button>
@@ -138,6 +170,9 @@ export default function HomePage() {
               <Button onClick={startJob} disabled={!canStart || submitting} className="group">
                 {submitting ? "Launching" : "Run Replay"}
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              </Button>
+              <Button variant="outline" onClick={startJudgeMode} disabled={submitting}>
+                Judge Mode
               </Button>
               <Button variant="outline" asChild>
                 <a href={job?.shareUrl || "#"}>View Evidence Pack</a>
@@ -165,6 +200,7 @@ export default function HomePage() {
                 key={demoMode ? "demo" : "upload"}
                 disabled={demoMode}
                 demoUrl={demoMode ? demoUrl : null}
+                maxMb={maxUploadMb}
                 onUploaded={setUpload}
                 onCleared={() => setUpload(null)}
               />
@@ -183,6 +219,11 @@ export default function HomePage() {
               <div className="space-y-2">
                 <label className="text-xs font-medium uppercase tracking-[0.2em] text-steel-400">Notes for Gemini</label>
                 <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Anything the model should know..." />
+                {mockMode ? (
+                  <p className="text-xs text-amberish-300">
+                    Mock mode is active (no Gemini API key detected). Responses will use demo data.
+                  </p>
+                ) : null}
               </div>
 
               {error ? <p className="text-xs text-amberish-300">{error}</p> : null}
@@ -210,6 +251,12 @@ export default function HomePage() {
                     <span>Steps: {job.steps.filter((step) => step.status === "success").length}/{job.steps.length}</span>
                     <span>Updated: {new Date(job.updatedAt).toLocaleTimeString()}</span>
                   </div>
+                  {job.status === "queued" ? (
+                    <p className="text-sm text-steel-300">Queued. Waiting for an available worker...</p>
+                  ) : null}
+                  {job.status === "error" ? (
+                    <p className="text-sm text-amberish-300">Run failed. Check Mission Control logs for details.</p>
+                  ) : null}
                   {job.status === "success" ? (
                     <div className="space-y-2">
                       <p className="text-sm text-emerald-200">Evidence pack ready.</p>
