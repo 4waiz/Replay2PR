@@ -89,7 +89,7 @@ export default function EvidencePage() {
             <div className="rounded-[20px] border-2 border-ink/10 bg-white p-4 shadow-sticker">
               <p className="text-xs uppercase tracking-[0.2em] text-muted">Status</p>
               <Badge className={job.status === "success" ? "bg-success text-white" : "bg-danger text-white"}>
-                {job.status === "success" ? "?? SUCCESS" : "?? ERROR"}
+                {job.status === "success" ? "✅ SUCCESS" : "🐞 ERROR"}
               </Badge>
             </div>
             <div className="rounded-[20px] border-2 border-ink/10 bg-white p-4 shadow-sticker">
@@ -166,7 +166,7 @@ export default function EvidencePage() {
                 {job.verify ? (
                   <>
                     <Badge className={job.verify.passed ? "bg-success text-white" : "bg-danger text-white"}>
-                      {job.verify.passed ? "? PASS" : "? FAIL"}
+                      {job.verify.passed ? "✅ PASS" : "❌ FAIL"}
                     </Badge>
                     <ScrollArea className="h-48 rounded-2xl border-2 border-ink/10 bg-white p-3">
                       <pre className="text-xs text-ink/80">{job.verify.output || "No output"}</pre>

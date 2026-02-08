@@ -6,7 +6,7 @@ export default function DemoPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:flex-row">
         <div className="flex-1 space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border-2 border-ink/10 bg-white px-4 py-2 text-xs font-semibold text-ink shadow-sticker">
-            ?? Demo Target - Replay2PR
+            🎮 Demo Target - Replay2PR
           </div>
           <BuggyForm />
         </div>

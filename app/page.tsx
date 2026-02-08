@@ -13,7 +13,6 @@ import { Progress } from "@/components/ui/progress";
 import { UploadDropzone, UploadResult } from "@/components/upload-dropzone";
 import { MissionControl } from "@/components/mission-control";
 import { JobData } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 function Mascot({ mood }: { mood: "idle" | "thinking" | "success" | "fail" }) {
   const palette = {
@@ -227,8 +226,8 @@ export default function HomePage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Badge variant="info">?? Demo Ready</Badge>
-          {mockMode ? <Badge variant="warning">?? Mock Mode</Badge> : null}
+          <Badge variant="info">🎮 Demo Ready</Badge>
+          {mockMode ? <Badge variant="warning">🧪 Mock Mode</Badge> : null}
           <div className="flex items-center gap-2 rounded-full border-2 border-ink/10 bg-white px-3 py-2 text-xs font-semibold text-ink shadow-sticker">
             {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             <span>Sound</span>
@@ -270,7 +269,7 @@ export default function HomePage() {
               </div>
               {mockMode ? (
                 <p className="mt-3 text-xs text-ink/70">
-                  ?? Mock mode active. Add `GEMINI_API_KEY` in `.env.local` for live Gemini runs.
+                  🧪 Mock mode active. Add `GEMINI_API_KEY` in `.env.local` for live Gemini runs.
                 </p>
               ) : null}
             </motion.div>

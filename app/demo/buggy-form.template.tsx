@@ -32,7 +32,7 @@ export default function BuggyForm() {
           <p className="text-sm text-muted">File a quick report to reproduce the bug.</p>
         </div>
         <Badge data-testid="status-chip" variant={submitted ? "success" : "default"}>
-          {submitted ? "? Sent" : status}
+          {submitted ? "✅ Sent" : status}
         </Badge>
       </div>
 
