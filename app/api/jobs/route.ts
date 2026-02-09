@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createJob } from "@/lib/jobs";
 import { createDemoUpload } from "@/lib/demo-video";
+import { isVercelRuntime } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const isServerless = isVercelRuntime();
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -25,13 +27,21 @@ export async function POST(request: Request) {
   let finalUploadFilename = uploadFilename;
 
   if (demoMode) {
-    const demo = await createDemoUpload();
-    finalUploadId = demo.uploadId;
-    finalUploadFilename = demo.filename;
+    if (isServerless) {
+      finalUploadId = "demo.mp4";
+      finalUploadFilename = "demo.mp4";
+    } else {
+      const demo = await createDemoUpload();
+      finalUploadId = demo.uploadId;
+      finalUploadFilename = demo.filename;
+    }
   }
 
   if (!finalUploadId) {
-    return NextResponse.json({ error: "Upload is required when demo mode is off" }, { status: 400 });
+    const message = isServerless
+      ? "Uploads are disabled in the Vercel demo. Enable Demo Mode to continue."
+      : "Upload is required when demo mode is off";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const job = await createJob({

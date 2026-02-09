@@ -70,6 +70,16 @@ export default function HomePage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const lastStatusRef = useRef<JobData["status"] | null>(null);
 
+  const parseJson = async (res: Response) => {
+    const text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  };
+
   const confettiPieces = useMemo(
     () =>
       Array.from({ length: 26 }).map((_, index) => ({
@@ -170,11 +180,13 @@ export default function HomePage() {
           repoUrl: effectiveDemo ? undefined : (effectiveRepo || undefined)
         })
       });
+      const data = await parseJson(res);
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to start job");
+        throw new Error(data?.error || "Failed to start job");
       }
-      const data = await res.json();
+      if (!data?.jobId) {
+        throw new Error("Failed to start job");
+      }
       setJobId(data.jobId);
     } catch (err: any) {
       setError(err.message || "Failed to start job");

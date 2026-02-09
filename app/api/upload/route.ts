@@ -3,13 +3,19 @@ import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs/promises";
 import { ensureArtifactsStructure, getUploadsDir } from "@/lib/artifacts";
-import { getMaxUploadMb } from "@/lib/env";
+import { getMaxUploadMb, isVercelRuntime } from "@/lib/env";
 
 export const runtime = "nodejs";
 
 const MAX_UPLOAD_MB = getMaxUploadMb();
 
 export async function POST(request: Request) {
+  if (isVercelRuntime()) {
+    return NextResponse.json(
+      { error: "Uploads are disabled in the Vercel demo. Enable Demo Mode to continue." },
+      { status: 400 }
+    );
+  }
   await ensureArtifactsStructure();
   const formData = await request.formData();
   const file = formData.get("file");

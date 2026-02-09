@@ -20,12 +20,20 @@ import {
 import { runPlaywrightTest } from "@/lib/playwright";
 import { applyUnifiedDiff, createUnifiedDiff } from "@/lib/patcher";
 import { readDemoTarget, resetDemoTarget, writeDemoTarget } from "@/lib/demo-target";
-import { getMaxConcurrentJobs } from "@/lib/env";
+import { getMaxConcurrentJobs, isVercelRuntime } from "@/lib/env";
 
 const jobs = new Map<string, JobData>();
 const jobQueue: string[] = [];
 let runningJobs = 0;
 const MAX_CONCURRENT_JOBS = getMaxConcurrentJobs();
+
+interface CreateJobParams {
+  mode: "demo" | "repo";
+  repoUrl?: string;
+  uploadId: string;
+  uploadFilename?: string;
+  notes?: string;
+}
 
 const stepDefs: { id: StepId; title: string }[] = [
   { id: "extract", title: "Extract" },
@@ -79,13 +87,88 @@ function finishStep(job: JobData, id: StepId, status: JobStep["status"], summary
   if (summary) step.summary = summary;
 }
 
-export async function createJob(params: {
-  mode: "demo" | "repo";
-  repoUrl?: string;
-  uploadId: string;
-  uploadFilename?: string;
-  notes?: string;
-}) {
+function svgToDataUrl(svg: string) {
+  const encoded = Buffer.from(svg, "utf8").toString("base64");
+  return `data:image/svg+xml;base64,${encoded}`;
+}
+
+async function createMockJob(id: string, params: CreateJobParams): Promise<JobData> {
+  const createdAt = now();
+  const updatedAt = createdAt;
+  const job: JobData = {
+    id,
+    mode: params.mode,
+    repoUrl: params.repoUrl,
+    uploadId: params.uploadId,
+    uploadFilename: params.uploadFilename,
+    notes: params.notes,
+    createdAt,
+    updatedAt,
+    status: "success",
+    steps: initSteps(),
+    shareUrl: `/evidence/${id}`
+  };
+
+  const videoInfo = `${params.uploadFilename || params.uploadId}`;
+  const repro = await extractReproSteps(
+    { notes: params.notes || "", videoInfo },
+    { forceMock: true }
+  );
+  job.reproSteps = repro.steps;
+
+  const testResult = await generatePlaywrightTest(
+    { repro, baseUrlHint: "https://example.com" },
+    { forceMock: true }
+  );
+  job.testFile = "mock/generated.spec.ts";
+  job.testCode = testResult.testCode;
+
+  const fallbackSource = `"use client";\nimport { useState } from "react";\n\nexport default function BuggyForm() {\n  const [submitted, setSubmitted] = useState(false);\n  const [status, setStatus] = useState("Draft");\n  return <div data-testid="demo-root" />;\n}\n`;
+  const currentSource = await readDemoTarget().catch(() => fallbackSource);
+  const patchPlan = await generatePatchDiff(
+    { repro, testOutput: "Mock run in serverless mode.", currentSource },
+    { forceMock: true }
+  );
+  job.patchDiff = patchPlan.diff;
+  job.patchSummary = patchPlan.summary;
+
+  job.verify = {
+    passed: true,
+    summary: "Mock verification passed",
+    output: "Playwright runs are disabled in the Vercel demo. This output is simulated."
+  };
+
+  job.evidence = {
+    beforeImage: svgToDataUrl(placeholderSvg("Before Patch")),
+    afterImage: svgToDataUrl(placeholderSvg("After Patch"))
+  };
+
+  const logTime = new Date().toLocaleTimeString();
+  const markStep = (id: StepId, summary: string, log: string) => {
+    const step = getStep(job, id);
+    step.status = "success";
+    step.startedAt = createdAt;
+    step.endedAt = updatedAt;
+    step.summary = summary;
+    step.logs.push(`[${logTime}] ${log}`);
+  };
+
+  markStep("extract", repro.summary, "Generated mock reproduction steps.");
+  markStep("reproduce", "Playwright test generated.", "Generated mock Playwright test.");
+  markStep("patch", patchPlan.summary, "Generated mock patch diff.");
+  markStep("verify", job.verify.summary, "Skipped Playwright execution in serverless mode.");
+  markStep("ship", "Evidence pack ready.", "Packaged mock evidence artifacts.");
+
+  return job;
+}
+
+export async function createJob(params: CreateJobParams) {
+  if (isVercelRuntime()) {
+    const id = randomUUID();
+    const job = await createMockJob(id, params);
+    jobs.set(id, job);
+    return job;
+  }
   await ensureArtifactsStructure();
   const id = randomUUID();
   const job: JobData = {
@@ -118,7 +201,17 @@ export async function getJob(id: string) {
       jobs.set(id, diskJob);
       return diskJob;
     }
-    return jobs.get(id);
+    const cached = jobs.get(id);
+    if (cached) return cached;
+    if (isVercelRuntime()) {
+      return createMockJob(id, {
+        mode: "demo",
+        uploadId: "demo.mp4",
+        uploadFilename: "demo.mp4",
+        notes: ""
+      });
+    }
+    return undefined;
   } catch {
     return undefined;
   }

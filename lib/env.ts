@@ -4,6 +4,10 @@ export function parseBoolean(value?: string) {
   return ["true", "1", "yes", "y", "on"].includes(normalized);
 }
 
+export function isVercelRuntime() {
+  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+}
+
 export function isMockGemini() {
   return !process.env.GEMINI_API_KEY || parseBoolean(process.env.USE_MOCK_GEMINI);
 }

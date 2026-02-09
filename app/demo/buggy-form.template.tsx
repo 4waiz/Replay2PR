@@ -25,7 +25,7 @@ export default function BuggyForm() {
   };
 
   return (
-    <div className="space-y-6 rounded-[28px] border-2 border-ink/10 bg-white/90 p-6 shadow-soft">
+    <div className="w-full space-y-6 rounded-[28px] border-2 border-ink/10 bg-white/90 p-6 shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-ink">Replay Incident Report</h2>
@@ -45,8 +45,8 @@ export default function BuggyForm() {
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="w-full space-y-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted">Reporter</label>
             <Input
