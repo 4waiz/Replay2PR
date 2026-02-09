@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -8,6 +8,11 @@ const body = IBM_Plex_Sans({ subsets: ["latin"], weight: ["300", "400", "500", "
 export const metadata: Metadata = {
   title: "Replay2PR",
   description: "Turn bug videos into reproducible Playwright tests and patch evidence packs."
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
