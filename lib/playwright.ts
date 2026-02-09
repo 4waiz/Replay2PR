@@ -37,9 +37,10 @@ export async function runPlaywrightTest(testFile: string, jobId: string): Promis
   const cwd = process.cwd();
   const jobDir = getJobDir(jobId);
   const outputPath = path.join(jobDir, "playwright-output");
-  const command = `npx playwright test "${testFile}" --reporter=line --output="${outputPath}"`;
+  const command = `npx playwright test --config=playwright.config.ts --reporter=line --output="${outputPath}"`;
   const env = {
     ...process.env,
+    PLAYWRIGHT_TEST_DIR: path.dirname(testFile),
     BASE_URL: process.env.BASE_URL || "http://localhost:3000"
   };
 

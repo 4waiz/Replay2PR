@@ -10,7 +10,13 @@ import {
   writeText,
   placeholderSvg
 } from "@/lib/artifacts";
-import { extractReproSteps, generatePatchDiff, generatePlaywrightTest } from "@/lib/gemini";
+import {
+  extractReproSteps,
+  generatePatchDiff,
+  generatePlaywrightTest,
+  getGeminiFallbackReason,
+  isGeminiRecoverableError
+} from "@/lib/gemini";
 import { runPlaywrightTest } from "@/lib/playwright";
 import { applyUnifiedDiff, createUnifiedDiff } from "@/lib/patcher";
 import { readDemoTarget, resetDemoTarget, writeDemoTarget } from "@/lib/demo-target";
@@ -152,15 +158,47 @@ async function runJob(job: JobData) {
   const jobDir = getJobDir(job.id);
   await fs.mkdir(jobDir, { recursive: true });
   await resetDemoTarget();
+  let forceMockGemini = job.mode === "demo";
+
+  async function callWithGeminiFallback<T>(
+    stepId: StepId,
+    run: () => Promise<T>,
+    fallback: () => Promise<T>
+  ) {
+    if (forceMockGemini) {
+      return fallback();
+    }
+    try {
+      return await run();
+    } catch (error) {
+      if (isGeminiRecoverableError(error)) {
+        forceMockGemini = true;
+        logStep(
+          job,
+          stepId,
+          `Gemini unavailable (${getGeminiFallbackReason(error)}). Falling back to mock responses for this run.`
+        );
+        return fallback();
+      }
+      throw error;
+    }
+  }
 
   const beforeSvg = placeholderSvg("Before Patch");
   await writeText(path.join(jobDir, "before.svg"), beforeSvg);
   job.evidence = { beforeImage: `/api/artifacts/jobs/${job.id}/before.svg` };
 
   startStep(job, "extract");
+  if (forceMockGemini) {
+    logStep(job, "extract", "Demo mode uses deterministic mock responses for reproducibility.");
+  }
   logStep(job, "extract", "Analyzing video metadata and notes with Gemini...");
   const videoInfo = `${job.uploadFilename || job.uploadId}`;
-  const repro = await extractReproSteps({ notes: job.notes || "", videoInfo });
+  const repro = await callWithGeminiFallback(
+    "extract",
+    () => extractReproSteps({ notes: job.notes || "", videoInfo }),
+    () => extractReproSteps({ notes: job.notes || "", videoInfo }, { forceMock: true })
+  );
   job.reproSteps = repro.steps;
   await writeJson(path.join(jobDir, "repro.json"), repro);
   logStep(job, "extract", `Captured ${repro.steps.length} reproduction steps.`);
@@ -169,7 +207,11 @@ async function runJob(job: JobData) {
 
   startStep(job, "reproduce");
   logStep(job, "reproduce", "Generating Playwright test...");
-  const testResult = await generatePlaywrightTest({ repro, baseUrlHint: process.env.BASE_URL || "http://localhost:3000" });
+  const testResult = await callWithGeminiFallback(
+    "reproduce",
+    () => generatePlaywrightTest({ repro, baseUrlHint: process.env.BASE_URL || "http://localhost:3000" }),
+    () => generatePlaywrightTest({ repro, baseUrlHint: process.env.BASE_URL || "http://localhost:3000" }, { forceMock: true })
+  );
   const testFile = path.join(jobDir, "generated.spec.ts");
   await writeText(testFile, testResult.testCode);
   job.testFile = `artifacts/jobs/${job.id}/generated.spec.ts`;
@@ -186,7 +228,11 @@ async function runJob(job: JobData) {
   startStep(job, "patch");
   logStep(job, "patch", "Requesting patch plan from Gemini...");
   const currentSource = await readDemoTarget();
-  const patchPlan = await generatePatchDiff({ repro, testOutput: reproRun.output, currentSource });
+  const patchPlan = await callWithGeminiFallback(
+    "patch",
+    () => generatePatchDiff({ repro, testOutput: reproRun.output, currentSource }),
+    () => generatePatchDiff({ repro, testOutput: reproRun.output, currentSource }, { forceMock: true })
+  );
   logStep(job, "patch", patchPlan.summary);
   const patchedSource = applyUnifiedDiff(currentSource, patchPlan.diff);
   await writeDemoTarget(patchedSource);
@@ -205,7 +251,11 @@ async function runJob(job: JobData) {
   while (!verifyRun.passed && attempts < 2) {
     logStep(job, "verify", "Patch did not resolve. Attempting second patch...");
     const latestSource = await readDemoTarget();
-    const followupPatch = await generatePatchDiff({ repro, testOutput: verifyRun.output, currentSource: latestSource });
+    const followupPatch = await callWithGeminiFallback(
+      "verify",
+      () => generatePatchDiff({ repro, testOutput: verifyRun.output, currentSource: latestSource }),
+      () => generatePatchDiff({ repro, testOutput: verifyRun.output, currentSource: latestSource }, { forceMock: true })
+    );
     const followupPatched = applyUnifiedDiff(latestSource, followupPatch.diff);
     await writeDemoTarget(followupPatched);
     const followupDiff = createUnifiedDiff("app/demo/buggy-form.tsx", latestSource, followupPatched);

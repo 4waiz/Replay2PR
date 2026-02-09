@@ -19,8 +19,8 @@ export default function BuggyForm() {
 
     setTimeout(() => {
       // BUG: should setSubmitted(true) and status to Sent.
-      setSubmitted(false);
-      setStatus("Draft");
+      setSubmitted(true);
+      setStatus("Sent");
     }, 350);
   };
 

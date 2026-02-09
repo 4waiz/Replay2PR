@@ -59,16 +59,64 @@ function extractJson(text: string) {
   return JSON.parse(sliced);
 }
 
+function normalizeErrorMessage(error: unknown) {
+  if (!error) return "Unknown error";
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message || "Unknown error";
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
+export function isGeminiQuotaError(error: unknown) {
+  const message = normalizeErrorMessage(error).toLowerCase();
+  return (
+    message.includes("429") ||
+    message.includes("too many requests") ||
+    message.includes("quota") ||
+    message.includes("rate limit")
+  );
+}
+
+export function isGeminiModelNotFoundError(error: unknown) {
+  const message = normalizeErrorMessage(error).toLowerCase();
+  return (
+    message.includes("not found for api version") ||
+    message.includes("not supported for generatecontent") ||
+    message.includes("model is not found") ||
+    (message.includes("models/") && message.includes("not found"))
+  );
+}
+
+export function isGeminiRecoverableError(error: unknown) {
+  return isGeminiQuotaError(error) || isGeminiModelNotFoundError(error);
+}
+
+export function getGeminiFallbackReason(error: unknown) {
+  if (isGeminiQuotaError(error)) return "quota or rate limit";
+  if (isGeminiModelNotFoundError(error)) return "model not available";
+  return "unexpected error";
+}
+
 async function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function withRetry<T>(fn: (attempt: number) => Promise<T>, maxRetries = 2) {
+async function withRetry<T>(
+  fn: (attempt: number) => Promise<T>,
+  maxRetries = 2,
+  shouldRetry?: (error: unknown) => boolean
+) {
   let attempt = 0;
   while (true) {
     try {
       return await fn(attempt);
     } catch (error) {
+      if (shouldRetry && !shouldRetry(error)) {
+        throw error;
+      }
       if (attempt >= maxRetries) throw error;
       const delay = 500 * Math.pow(2, attempt);
       await wait(delay);
@@ -91,20 +139,27 @@ async function callGeminiJson<T>(prompt: string, modelName: string, schema: z.Zo
     }
   });
 
-  return withRetry(async () => {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const json = extractJson(text);
-    const parsed = schema.safeParse(json);
-    if (!parsed.success) {
-      throw new Error(`Gemini response validation failed: ${parsed.error.message}`);
-    }
-    return parsed.data;
-  });
+  return withRetry(
+    async () => {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const json = extractJson(text);
+      const parsed = schema.safeParse(json);
+      if (!parsed.success) {
+        throw new Error(`Gemini response validation failed: ${parsed.error.message}`);
+      }
+      return parsed.data;
+    },
+    2,
+    (error) => !isGeminiRecoverableError(error)
+  );
 }
 
-export async function extractReproSteps(params: { notes: string; videoInfo: string }) {
-  if (isMockGemini()) {
+export async function extractReproSteps(
+  params: { notes: string; videoInfo: string },
+  options?: { forceMock?: boolean }
+) {
+  if (options?.forceMock || isMockGemini()) {
     return ReproSchema.parse(demoRepro);
   }
   const prompt = `You are a QA automation lead. Extract strict JSON with the following schema:
@@ -122,8 +177,11 @@ Return only JSON.`;
   return callGeminiJson(prompt, FLASH_MODEL, ReproSchema);
 }
 
-export async function generatePlaywrightTest(params: { repro: typeof demoRepro; baseUrlHint: string }) {
-  if (isMockGemini()) {
+export async function generatePlaywrightTest(
+  params: { repro: typeof demoRepro; baseUrlHint: string },
+  options?: { forceMock?: boolean }
+) {
+  if (options?.forceMock || isMockGemini()) {
     return TestSchema.parse({ testCode: demoTestCode });
   }
 
@@ -140,8 +198,11 @@ Return only JSON.`;
   return callGeminiJson(prompt, FLASH_MODEL, TestSchema);
 }
 
-export async function generatePatchDiff(params: { repro: typeof demoRepro; testOutput: string; currentSource: string }) {
-  if (isMockGemini()) {
+export async function generatePatchDiff(
+  params: { repro: typeof demoRepro; testOutput: string; currentSource: string },
+  options?: { forceMock?: boolean }
+) {
+  if (options?.forceMock || isMockGemini()) {
     const after = params.currentSource
       .replace("setSubmitted(false)", "setSubmitted(true)")
       .replace("setStatus(\"Draft\")", "setStatus(\"Sent\")");
@@ -164,5 +225,12 @@ Current file:\n${params.currentSource}
 
 Return only JSON.`;
 
-  return callGeminiJson(prompt, PRO_MODEL, PatchSchema);
+  try {
+    return await callGeminiJson(prompt, PRO_MODEL, PatchSchema);
+  } catch (error) {
+    if (isGeminiRecoverableError(error) && PRO_MODEL !== FLASH_MODEL) {
+      return callGeminiJson(prompt, FLASH_MODEL, PatchSchema);
+    }
+    throw error;
+  }
 }
