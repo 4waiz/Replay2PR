@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createJob } from "@/lib/jobs";
 import { createDemoUpload } from "@/lib/demo-video";
-import { isVercelRuntime } from "@/lib/env";
+import { isRepoModeEnabled, isVercelRuntime } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -16,6 +16,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const isServerless = isVercelRuntime();
+  const repoEnabled = isRepoModeEnabled();
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -23,10 +24,12 @@ export async function POST(request: Request) {
   }
 
   const { demoMode, uploadId, uploadFilename, notes, repoUrl } = parsed.data;
+  const forceDemo = !demoMode && !repoEnabled;
+  const effectiveDemo = demoMode || forceDemo;
   let finalUploadId = uploadId;
   let finalUploadFilename = uploadFilename;
 
-  if (demoMode) {
+  if (effectiveDemo) {
     if (isServerless) {
       finalUploadId = "demo.mp4";
       finalUploadFilename = "demo.mp4";
@@ -45,11 +48,11 @@ export async function POST(request: Request) {
   }
 
   const job = await createJob({
-    mode: demoMode ? "demo" : "repo",
+    mode: effectiveDemo ? "demo" : "repo",
     repoUrl,
     uploadId: finalUploadId,
     uploadFilename: finalUploadFilename,
-    notes
+    notes: forceDemo ? `${notes || ""}\n[System] Repo mode disabled; running demo pipeline.`.trim() : notes
   });
 
   return NextResponse.json({

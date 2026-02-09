@@ -28,8 +28,10 @@ export default function BuggyForm() {
     <div className="w-full space-y-6 rounded-[28px] border-2 border-ink/10 bg-white/90 p-6 shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-ink">Replay Incident Report</h2>
-          <p className="text-sm text-muted">File a quick report to reproduce the bug.</p>
+          <h2 className="text-balance text-xl font-semibold leading-tight text-ink sm:text-2xl md:text-3xl">
+            Replay Incident Report
+          </h2>
+          <p className="text-balance text-sm text-muted sm:text-base">File a quick report to reproduce the bug.</p>
         </div>
         <Badge data-testid="status-chip" variant={submitted ? "success" : "default"}>
           {submitted ? "✅ Sent" : status}
@@ -77,7 +79,7 @@ export default function BuggyForm() {
           />
         </div>
 
-        <Button type="submit" data-testid="submit-button" className="w-full wiggle-hover">
+        <Button type="submit" data-testid="submit-button" className="w-full whitespace-nowrap wiggle-hover">
           Send Replay Report
         </Button>
       </form>

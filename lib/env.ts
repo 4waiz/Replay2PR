@@ -8,6 +8,10 @@ export function isVercelRuntime() {
   return Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
 }
 
+export function isRepoModeEnabled() {
+  return parseBoolean(process.env.ENABLE_REPO_MODE);
+}
+
 export function isMockGemini() {
   return !process.env.GEMINI_API_KEY || parseBoolean(process.env.USE_MOCK_GEMINI);
 }

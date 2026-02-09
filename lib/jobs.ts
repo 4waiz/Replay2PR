@@ -247,11 +247,12 @@ async function runJobWithGuard(job: JobData) {
 }
 
 async function runJob(job: JobData) {
-
   const jobDir = getJobDir(job.id);
   await fs.mkdir(jobDir, { recursive: true });
   await resetDemoTarget();
-  let forceMockGemini = job.mode === "demo";
+  const repoFallback = job.mode === "repo" && !job.repoUrl;
+  const repoDisabled = job.mode === "demo" && Boolean(job.repoUrl);
+  let forceMockGemini = job.mode === "demo" || repoFallback || repoDisabled;
 
   async function callWithGeminiFallback<T>(
     stepId: StepId,
@@ -282,6 +283,20 @@ async function runJob(job: JobData) {
   job.evidence = { beforeImage: `/api/artifacts/jobs/${job.id}/before.svg` };
 
   startStep(job, "extract");
+  if (repoDisabled) {
+    logStep(
+      job,
+      "extract",
+      "Repo mode is disabled in this build. Running the demo pipeline instead."
+    );
+  }
+  if (repoFallback) {
+    logStep(
+      job,
+      "extract",
+      "Repo mode is disabled without a repo URL. Falling back to the demo pipeline."
+    );
+  }
   if (forceMockGemini) {
     logStep(job, "extract", "Demo mode uses deterministic mock responses for reproducibility.");
   }
